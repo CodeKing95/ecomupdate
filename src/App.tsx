@@ -18,6 +18,14 @@ import CheckoutPage from "./pages/CheckoutPage";
 import OrderSummary from "./pages/OrderSummary";
 import { ProductsData } from "./components/Products";
 import ProductDetails from "./pages/ProductDetails";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./types/database.types";
+
+const supabase = createClient<Database>(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_KEY
+);
+
 
 const BannerData = {
   discount: "30% OFF",
@@ -32,6 +40,19 @@ const BannerData = {
 
 
 const App = () => {
+  fetchData();
+
+  async function fetchData() {
+    const { data, error } = await supabase
+    .from('products')
+    .select('*, price(title, image)');
+    if (error) {
+      console.log(error);
+    }
+    console.log(data);
+    return data;
+  }
+
   const [searchTerm, setSearchTerm] = useState("");
   return (
     <>
