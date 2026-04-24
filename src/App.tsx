@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
@@ -39,33 +39,91 @@ const BannerData = {
 };
 
 
+type Product = Database["public"]["Tables"]["products"]["Row"];
+
 const App = () => {
-  fetchData();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   async function fetchData() {
     const { data, error } = await supabase
-    .from('products')
-    .select('*, price(title, image)');
+      .from("products")
+      .select("*");
+
     if (error) {
-      console.log(error);
+      console.error(error);
+    } else {
+      setProducts(data ?? []);
     }
-    console.log(data);
-    return data;
   }
 
-  const [searchTerm, setSearchTerm] = useState("");
+  async function addProduct(newProduct: {
+    title: string;
+    price: number;
+    image: string;
+  }) {
+    const { data, error } = await supabase
+      .from("products")
+      .insert([newProduct])
+      .select();
+
+    if (error) {
+      console.error(error);
+    } else {
+      setProducts((prev) => [...prev, ...(data ?? [])]);
+    }
+  }
+
+  
+  async function updateProduct(id: string, updates: Partial<Product>) {
+    const { data, error } = await supabase
+      .from("products")
+      .update(updates)
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      console.error(error);
+    } else if (data && data.length > 0) {
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? data[0] : p))
+      );
+    }
+  }
+
+  
+  async function deleteProduct(id: string) {
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error(error);
+    } else {
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+  }
+
   return (
     <>
-      <Navbar 
-       searchTerm={searchTerm} 
-       setSearchTerm={setSearchTerm} 
+      <Navbar
+       searchTerm={searchTerm}
+       setSearchTerm={setSearchTerm}
        products={ProductsData}
+       addProduct={addProduct}
+       updateProduct={updateProduct}
+       deleteProudct={deleteProduct}
        />
       <Toaster position="top-center" reverseOrder={false} />
 
       <Routes>
         <Route path="/" element={
-          <main 
+          <main
           className="
             pt-16 sm:pt-20
             px-4 sm:px-6 lg:px-8
@@ -76,7 +134,7 @@ const App = () => {
             <Category2 />
             <Services />
             <Banner data={BannerData} />
-            <Products searchTerm={searchTerm} />
+            <Products searchTerm={searchTerm}  />
             <TopProducts />
             <Blogs />
             <Partnership />
